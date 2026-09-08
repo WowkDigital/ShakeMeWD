@@ -115,6 +115,27 @@
       </div>
     </header>
 
+    <!-- Pasek diagnostyczny czujnika (Live Status) -->
+    <div id="sensor-diagnostic-bar" class="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col space-y-1.5 text-xs shadow">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span id="diag-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="diag-title" class="font-bold text-slate-200">Diagnoza czujnika:</span>
+        </div>
+        <span id="diag-events-badge" class="font-mono-pi text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+          Zdarzeń: 0
+        </span>
+      </div>
+      <p id="diag-message" class="text-[11px] text-amber-300/90 leading-tight">
+        Sprawdzanie dostępności akcelerometru...
+      </p>
+      <div id="diag-details" class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-800/80 text-[10px] font-mono-pi text-slate-400">
+        <span id="diag-protocol" class="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">Protokół: HTTP</span>
+        <span id="diag-api" class="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">DeviceMotion: ?</span>
+        <span id="diag-secure" class="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">SecureContext: ?</span>
+      </div>
+    </div>
+
     <!-- Main interactive area -->
     <main class="flex-1 flex flex-col justify-center space-y-3">
       
