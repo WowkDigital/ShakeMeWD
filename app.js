@@ -9,9 +9,15 @@ let shakeThreshold = 18; // domyślny próg przyspieszenia (m/s^2)
 // Referencje DOM
 let digitCountBadge, latestDigitEl, digitPosEl, latestDigitCard, digitRing;
 let digitsContainer, forceBar, motionStatus, phoneIcon, btnShake, btnReset;
-let btnCopy, copyText, btnPermission, toggleSound, toggleVibrate;
+let btnCopy, copyText, toggleSound, toggleVibrate;
 let thresholdSlider, thresholdValue, thresholdLine;
 let valX, valY, valZ, accelCanvas, canvasCtx, threeContainer;
+
+// Elementy uniwersalnego panelu aktywacji żyroskopu
+let activationCard, btnActivateMotion, btnActivateText, activationTitle, activationDesc;
+let diagDot, diagMessage, diagEventsBadge;
+let sensorEventCount = 0;
+let isRealSensorActive = false;
 
 // Generator Pi
 let piGenerator = null;
@@ -35,10 +41,9 @@ let currentMagnitude = 0;
 let scene, camera, renderer, phoneMesh, vectorArrow;
 let targetRotX = 0, targetRotY = 0, targetRotZ = 0;
 
-// Ostatnie stany akcelerometru
+// Stany akcelerometru
 let lastX = null, lastY = null, lastZ = null;
 let lastSensorTimestamp = 0;
-let isRealSensorActive = false;
 
 // ==========================================
 // Regulacja progu czułości
@@ -53,8 +58,6 @@ function updateThreshold(newVal) {
   }
   if (thresholdLine && accelCanvas) {
     const h = accelCanvas.clientHeight || 80;
-    // Skala wykresu to +/- 30 m/s^2 od środka (midY = h/2)
-    // Próg od środka w górę
     const midY = h / 2;
     const maxScale = 30;
     const lineY = Math.max(4, midY - (shakeThreshold / maxScale) * (midY - 4));
@@ -126,7 +129,7 @@ function revealNextDigit() {
   if (latestDigitEl) latestDigitEl.textContent = nextDigit;
   if (digitPosEl) digitPosEl.textContent = `${revealedCount}. miejsce po przecinku`;
 
-  // Animacja karty głównej
+  // Animacja karty
   if (latestDigitCard) {
     latestDigitCard.classList.remove('scale-105', 'border-purple-400');
     void latestDigitCard.offsetWidth;
@@ -143,7 +146,7 @@ function revealNextDigit() {
     }, 180);
   }
 
-  // Dodanie cyfry do ciągu
+  // Dodanie do ciągu
   if (digitsContainer) {
     const span = document.createElement('span');
     span.textContent = nextDigit;
@@ -152,7 +155,7 @@ function revealNextDigit() {
     digitsContainer.scrollTop = digitsContainer.scrollHeight;
   }
 
-  // Haptic feedback (wibracje)
+  // Wibracje
   if (toggleVibrate && toggleVibrate.checked && 'vibrate' in navigator) {
     navigator.vibrate(35);
   }
@@ -160,13 +163,13 @@ function revealNextDigit() {
   // Dźwięk
   playPopSound();
 
-  // Wstrząs w widoku 3D
+  // Wstrząs w 3D
   if (phoneMesh) {
     phoneMesh.rotation.z += (Math.random() - 0.5) * 0.7;
     phoneMesh.rotation.x += (Math.random() - 0.5) * 0.7;
   }
 
-  // Animacja ikony telefonu
+  // Animacja ikony
   if (phoneIcon) {
     phoneIcon.classList.remove('animate-shake-hint');
     void phoneIcon.offsetWidth;
@@ -229,7 +232,7 @@ function setupCanvas() {
   accelCanvas.height = displayH * dpr;
 
   canvasCtx = accelCanvas.getContext('2d');
-  canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0); // bezpieczne ustawienie skali DPR
+  canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   updateThreshold(shakeThreshold);
 }
 
@@ -250,7 +253,7 @@ function drawOscilloscope() {
   canvasCtx.lineTo(w, midY);
   canvasCtx.stroke();
 
-  // Siatka pomocnicza (subtelne linie)
+  // Linie siatki
   canvasCtx.strokeStyle = 'rgba(51, 65, 85, 0.2)';
   canvasCtx.beginPath();
   canvasCtx.moveTo(0, h * 0.25);
@@ -259,14 +262,13 @@ function drawOscilloscope() {
   canvasCtx.lineTo(w, h * 0.75);
   canvasCtx.stroke();
 
-  // Rysowanie 3 linii osi (X, Y, Z)
   const step = w / (BUFFER_SIZE - 1);
-  const maxScale = 30; // 30 m/s^2 pełne wychylenie
+  const maxScale = 30;
 
   function drawAxis(buffer, color) {
     canvasCtx.beginPath();
     canvasCtx.strokeStyle = color;
-    canvasCtx.lineWidth = 1.8;
+    canvasCtx.lineWidth = 2.0;
     canvasCtx.lineJoin = 'round';
     for (let i = 0; i < BUFFER_SIZE; i++) {
       const idx = (bufIndex + i) % BUFFER_SIZE;
@@ -279,9 +281,9 @@ function drawOscilloscope() {
     canvasCtx.stroke();
   }
 
-  drawAxis(historyX, '#fb7185'); // Różowy X
-  drawAxis(historyY, '#34d399'); // Szmaragdowy Y
-  drawAxis(historyZ, '#38bdf8'); // Błękitny Z
+  drawAxis(historyX, '#f43f5e'); // Rose X
+  drawAxis(historyY, '#10b981'); // Emerald Y
+  drawAxis(historyZ, '#0ea5e9'); // Sky Z
 }
 
 // ==========================================
@@ -291,7 +293,7 @@ function init3D() {
   if (!threeContainer || typeof THREE === 'undefined') return;
 
   const width = threeContainer.clientWidth || 160;
-  const height = threeContainer.clientHeight || 144;
+  const height = threeContainer.clientHeight || 160;
 
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
@@ -303,15 +305,13 @@ function init3D() {
   threeContainer.innerHTML = '';
   threeContainer.appendChild(renderer.domElement);
 
-  // Oświetlenie
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
   scene.add(ambientLight);
 
   const dirLight = new THREE.DirectionalLight(0xc084fc, 1.4);
   dirLight.position.set(2, 3, 3);
   scene.add(dirLight);
 
-  // Telefon
   const group = new THREE.Group();
 
   const bodyGeo = new THREE.BoxGeometry(1.3, 2.3, 0.15);
@@ -334,7 +334,6 @@ function init3D() {
   screen.position.z = 0.08;
   group.add(screen);
 
-  // Wektor siły
   const arrowDir = new THREE.Vector3(0, 1, 0);
   vectorArrow = new THREE.ArrowHelper(arrowDir, new THREE.Vector3(0, 0, 0), 1.2, 0xf43f5e, 0.35, 0.2);
   group.add(vectorArrow);
@@ -355,26 +354,22 @@ function init3D() {
   });
 }
 
-// Pętla animacji 60 FPS
 let simTimer = 0;
 function mainAnimationLoop(timestamp) {
   requestAnimationFrame(mainAnimationLoop);
 
-  // Jeśli brak fizycznego akcelerometru, generuj łagodny szum w spoczynku (dzięki czemu wykres żyje)
+  // Jeśli brak fizycznego ruchu, delikatny szum grawitacji
   const timeSinceSensor = timestamp - lastSensorTimestamp;
   if (!isRealSensorActive || timeSinceSensor > 1200) {
     simTimer += 0.04;
-    // Delikatne drganie w stanie spoczynku
     const idleX = Math.sin(simTimer * 1.5) * 0.4;
-    const idleY = 9.8 + Math.cos(simTimer * 1.2) * 0.3; // grawitacja Ziemi
+    const idleY = 9.8 + Math.cos(simTimer * 1.2) * 0.3;
     const idleZ = Math.sin(simTimer * 0.8) * 0.2;
     pushSensorData(idleX, idleY, idleZ, 0.1);
   }
 
-  // Rysowanie oscyloskopu
   drawOscilloscope();
 
-  // Płynny ruch telefonu 3D
   if (phoneMesh && renderer && scene && camera) {
     phoneMesh.rotation.x += (targetRotX - phoneMesh.rotation.x) * 0.1;
     phoneMesh.rotation.y += (targetRotY - phoneMesh.rotation.y) * 0.1;
@@ -392,7 +387,7 @@ function mainAnimationLoop(timestamp) {
 }
 
 // ==========================================
-// Logika wstrząsu i akcelerometru
+// Logika wstrząsu i czujników
 // ==========================================
 function processAcceleration(x, y, z) {
   isRealSensorActive = true;
@@ -406,30 +401,26 @@ function processAcceleration(x, y, z) {
     totalDelta = deltaX + deltaY + deltaZ;
   }
 
-  // Wypchnięcie do bufora wykresu
   pushSensorData(x, y, z, totalDelta);
 
-  // Orientacja 3D
   targetRotX = (y / 9.8) * 0.8;
   targetRotY = (-x / 9.8) * 0.8;
 
-  // Pasek siły
   if (forceBar) {
     const percentage = Math.min((totalDelta / shakeThreshold) * 100, 100);
     forceBar.style.width = `${percentage}%`;
   }
 
-  // Wykrycie przekroczenia progu czułości
   if (totalDelta >= shakeThreshold) {
     if (motionStatus) {
-      motionStatus.textContent = `Wstrząs (${totalDelta.toFixed(0)} > ${shakeThreshold})! 💥`;
+      motionStatus.textContent = `· Wstrząs (${totalDelta.toFixed(0)} m/s²)! 💥`;
       motionStatus.className = "text-[11px] text-emerald-400 font-bold animate-pulse";
     }
     revealNextDigit();
     setTimeout(() => {
       if (motionStatus) {
-        motionStatus.textContent = "Zatrzęś telefonem!";
-        motionStatus.className = "text-slate-300 font-medium text-[11px]";
+        motionStatus.textContent = "· Oczekiwanie na ruch";
+        motionStatus.className = "text-[11px] text-purple-400 font-medium";
       }
     }, 450);
   }
@@ -439,48 +430,116 @@ function processAcceleration(x, y, z) {
   lastZ = z;
 }
 
-// Referencje diagnostyczne
-let diagDot, diagTitle, diagEventsBadge, diagMessage, diagProtocol, diagApi, diagSecure;
-let sensorEventCount = 0;
-
-function updateDiagnosticUI(status, title, message) {
-  if (!diagDot || !diagTitle || !diagMessage) return;
-
-  diagTitle.textContent = title;
-  diagMessage.textContent = message;
-
-  if (status === 'active') {
-    diagDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
-    diagMessage.className = "text-[11px] text-emerald-300 font-medium leading-tight";
-  } else if (status === 'warning') {
-    diagDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
-    diagMessage.className = "text-[11px] text-amber-300/90 leading-tight";
-  } else if (status === 'error') {
-    diagDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
-    diagMessage.className = "text-[11px] text-rose-300 leading-tight";
-  }
-}
-
 function handleMotionEvent(event) {
   sensorEventCount++;
   if (diagEventsBadge) {
     diagEventsBadge.textContent = `Zdarzeń: ${sensorEventCount}`;
-    diagEventsBadge.className = "font-mono-pi text-[10px] px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/50";
+    diagEventsBadge.className = "text-[10px] bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700/60 text-emerald-300 font-bold";
   }
 
   const acc = event.accelerationIncludingGravity || event.acceleration;
-  if (!acc || acc.x === null) {
-    if (sensorEventCount === 1) {
-      updateDiagnosticUI('warning', 'Puste odczyty', 'Czujnik zgłasza zdarzenia, ale brak danych (wartości null).');
-    }
-    return;
-  }
+  if (!acc || acc.x === null) return;
 
   if (sensorEventCount === 1 || !isRealSensorActive) {
-    updateDiagnosticUI('active', 'Czujnik aktywny!', 'Odbieranie danych z akcelerometru na żywo.');
+    setSensorActiveSuccess();
   }
 
   processAcceleration(acc.x || 0, acc.y || 0, acc.z || 0);
+}
+
+// Ustawienie UI po skutecznym włączeniu czujników
+function setSensorActiveSuccess() {
+  isRealSensorActive = true;
+  if (diagDot) {
+    diagDot.className = "w-3 h-3 rounded-full bg-emerald-400 animate-pulse";
+  }
+  if (activationTitle) {
+    activationTitle.textContent = "Czujniki ruchu AKTYWNE! 📱";
+  }
+  if (activationDesc) {
+    activationDesc.textContent = "Żyroskop i akcelerometr przesyłają dane na żywo. Machaj telefonem!";
+  }
+  if (diagMessage) {
+    diagMessage.textContent = "Połączenie z czujnikami nawiązane pomyślnie.";
+    diagMessage.className = "text-emerald-300 font-bold";
+  }
+  if (btnActivateMotion) {
+    btnActivateMotion.className = "mt-3.5 w-full py-3 px-4 bg-emerald-900/60 border border-emerald-500/50 text-emerald-200 font-bold text-xs rounded-xl shadow transition flex items-center justify-center space-x-2 pointer-events-none";
+    btnActivateText.textContent = "✓ CZUJNIK AKTYWNY (ZATRĘŚ TELEFONEM)";
+  }
+  if (activationCard) {
+    activationCard.className = "relative rounded-2xl bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-emerald-500/50 p-4 shadow-xl";
+  }
+}
+
+// ==========================================
+// UNIWERSALNY GEST AKTYWACJI (iOS, Android, Chrome, Safari)
+// ==========================================
+function triggerUniversalActivation() {
+  // Rozpocznij / odblokuj też AudioContext przy geście użytkownika
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+
+  if (diagMessage) {
+    diagMessage.textContent = "Próba aktywacji czujnika...";
+  }
+
+  // 1. Obsługa iOS Safari (DeviceMotionEvent.requestPermission)
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission()
+      .then(state => {
+        if (state === 'granted') {
+          window.addEventListener('devicemotion', handleMotionEvent, true);
+          setSensorActiveSuccess();
+        } else {
+          if (diagMessage) {
+            diagMessage.textContent = "Odmówiono uprawnień w Safari.";
+            diagMessage.className = "text-rose-400 font-bold";
+          }
+          if (diagDot) diagDot.className = "w-3 h-3 rounded-full bg-rose-500";
+        }
+      })
+      .catch(err => {
+        if (diagMessage) {
+          diagMessage.textContent = `Błąd uprawnień: ${err.message || err}`;
+          diagMessage.className = "text-rose-400 font-bold";
+        }
+      });
+    return;
+  }
+
+  // 2. Obsługa DeviceOrientation / Android
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().catch(() => {});
+  }
+
+  // 3. Android Chrome i standardowe przeglądarki
+  if ('ondevicemotion' in window || 'DeviceMotionEvent' in window) {
+    window.addEventListener('devicemotion', handleMotionEvent, true);
+
+    // Daj 600ms na nadejście zdarzenia
+    setTimeout(() => {
+      if (sensorEventCount > 0) {
+        setSensorActiveSuccess();
+      } else {
+        if (!window.isSecureContext && window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
+          if (diagMessage) {
+            diagMessage.textContent = "Chrome Android blokuje czujnik na HTTP. Uruchom po HTTPS lub użyj testu PC.";
+            diagMessage.className = "text-amber-300 font-bold";
+          }
+        } else {
+          setSensorActiveSuccess();
+        }
+      }
+    }, 600);
+  } else {
+    if (diagMessage) {
+      diagMessage.textContent = "Brak czujnika ruchu w tym urządzeniu. Działa tryb symulacji poniżej.";
+      diagMessage.className = "text-slate-400";
+    }
+  }
 }
 
 // Symulacja wstrząsu (przycisk testowy)
@@ -503,92 +562,10 @@ function triggerSimulatedShake() {
   }, 80);
 }
 
-// Inicjalizacja i pełna diagnostyka sensora
-function setupMotion() {
-  const isHttps = window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-  const hasMotionApi = 'DeviceMotionEvent' in window;
-  const needsIosPermission = hasMotionApi && typeof DeviceMotionEvent.requestPermission === 'function';
-
-  // Wypełnienie szczegółów technicznych w pasku
-  if (diagProtocol) diagProtocol.textContent = `Protokół: ${window.location.protocol.replace(':', '').toUpperCase()}`;
-  if (diagApi) diagApi.textContent = `DeviceMotion: ${hasMotionApi ? 'TAK' : 'BRAK'}`;
-  if (diagSecure) diagSecure.textContent = `SecureContext: ${window.isSecureContext ? 'TAK' : 'NIE'}`;
-
-  // 1. Sprawdzenie iOS (Safari)
-  if (needsIosPermission) {
-    if (btnPermission) btnPermission.classList.remove('hidden');
-    updateDiagnosticUI(
-      'warning',
-      'Wymagana zgoda (iOS)',
-      'Kliknij przycisk poniżej ("Włącz czujnik ruchu"), aby nadać uprawnienia w Safari.'
-    );
-
-    if (btnPermission) {
-      btnPermission.onclick = () => {
-        DeviceMotionEvent.requestPermission()
-          .then(state => {
-            if (state === 'granted') {
-              btnPermission.classList.add('hidden');
-              window.addEventListener('devicemotion', handleMotionEvent, true);
-              updateDiagnosticUI('active', 'Zgoda udzielona!', 'Akcelerometr aktywny. Wykrywanie wstrząsów...');
-              if (motionStatus) motionStatus.textContent = "Czujnik aktywny! 📱";
-            } else {
-              updateDiagnosticUI('error', 'Odrzucono zgodę', 'Safari odmówiło dostępu do czujników ruchu.');
-            }
-          })
-          .catch(err => {
-            updateDiagnosticUI('error', 'Błąd uprawnień', `Błąd: ${err.message || err}`);
-          });
-      };
-    }
-    return;
-  }
-
-  // 2. Sprawdzenie Android / Chrome na niezabezpieczonym HTTP
-  if (!isHttps && !window.location.hostname.includes('localhost')) {
-    updateDiagnosticUI(
-      'warning',
-      'Ostrzeżenie HTTP (Android)',
-      'Chrome na Androidzie blokuje akcelerometr na zwykłym HTTP. Jeśli wykres stoi, wymagany jest HTTPS.'
-    );
-  }
-
-  // 3. Rejestracja standardowa (Android / Desktop)
-  if (hasMotionApi) {
-    window.addEventListener('devicemotion', handleMotionEvent, true);
-    
-    // Sprawdź za 1.2s czy jakiekolwiek zdarzenie dotarło
-    setTimeout(() => {
-      if (sensorEventCount === 0) {
-        if (!isHttps) {
-          updateDiagnosticUI(
-            'error',
-            'Brak zdarzeń ruchu',
-            'Przeglądarka zablokowała czujnik z powodu braku HTTPS (lub urządzenie nie posiada akcelerometru).'
-          );
-        } else {
-          updateDiagnosticUI(
-            'warning',
-            'Oczekiwanie na ruch',
-            'Brak zdarzeń akcelerometru. Porusz telefonem lub użyj przycisku testowego.'
-          );
-        }
-      }
-    }, 1200);
-  } else {
-    updateDiagnosticUI(
-      'error',
-      'Brak API czujnika',
-      'Ta przeglądarka nie wspiera DeviceMotionEvent. Działa tryb symulacji.'
-    );
-  }
-}
-
 // ==========================================
 // Główny punkt startowy
 // ==========================================
 function initializeApp() {
-  // Pobranie elementów DOM
   digitCountBadge = document.getElementById('digit-count-badge');
   latestDigitEl = document.getElementById('latest-digit');
   digitPosEl = document.getElementById('digit-pos');
@@ -602,7 +579,6 @@ function initializeApp() {
   btnReset = document.getElementById('btn-reset');
   btnCopy = document.getElementById('btn-copy');
   copyText = document.getElementById('copy-text');
-  btnPermission = document.getElementById('btn-permission');
   toggleSound = document.getElementById('toggle-sound');
   toggleVibrate = document.getElementById('toggle-vibrate');
   thresholdSlider = document.getElementById('threshold-slider');
@@ -614,39 +590,41 @@ function initializeApp() {
   accelCanvas = document.getElementById('accel-chart');
   threeContainer = document.getElementById('three-container');
 
-  // Elementy diagnostyczne
+  // Uniwersalny panel
+  activationCard = document.getElementById('activation-card');
+  btnActivateMotion = document.getElementById('btn-activate-motion');
+  btnActivateText = document.getElementById('btn-activate-text');
+  activationTitle = document.getElementById('activation-title');
+  activationDesc = document.getElementById('activation-desc');
   diagDot = document.getElementById('diag-dot');
-  diagTitle = document.getElementById('diag-title');
-  diagEventsBadge = document.getElementById('diag-events-badge');
   diagMessage = document.getElementById('diag-message');
-  diagProtocol = document.getElementById('diag-protocol');
-  diagApi = document.getElementById('diag-api');
-  diagSecure = document.getElementById('diag-secure');
+  diagEventsBadge = document.getElementById('diag-events-badge');
 
-  // Obsługa suwaka progu czułości
+  if (btnActivateMotion) {
+    btnActivateMotion.addEventListener('click', triggerUniversalActivation);
+    btnActivateMotion.addEventListener('touchstart', triggerUniversalActivation, { passive: true });
+  }
+
   if (thresholdSlider) {
-    thresholdSlider.addEventListener('input', (e) => {
-      updateThreshold(e.target.value);
-    });
-    thresholdSlider.addEventListener('change', (e) => {
-      updateThreshold(e.target.value);
-    });
+    thresholdSlider.addEventListener('input', (e) => updateThreshold(e.target.value));
+    thresholdSlider.addEventListener('change', (e) => updateThreshold(e.target.value));
     updateThreshold(thresholdSlider.value);
   }
 
-  // Przyciski akcji
   if (btnShake) btnShake.addEventListener('click', triggerSimulatedShake);
   if (btnReset) btnReset.addEventListener('click', resetAll);
   if (btnCopy) btnCopy.addEventListener('click', copyPi);
 
-  // Inicjalizacja komponentów
   setupCanvas();
   init3D();
-  setupMotion();
   requestAnimationFrame(mainAnimationLoop);
+
+  // Jeśli urządzenie natychmiast zezwala bez kliknięcia (część przeglądarek)
+  if ('ondevicemotion' in window && !('requestPermission' in DeviceMotionEvent)) {
+    window.addEventListener('devicemotion', handleMotionEvent, { once: false, passive: true });
+  }
 }
 
-// Uruchom po załadowaniu DOM
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
