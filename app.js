@@ -16,6 +16,7 @@ let valX, valY, valZ, accelCanvas, canvasCtx, threeContainer;
 // Elementy uniwersalnego panelu aktywacji żyroskopu
 let activationCard, btnActivateMotion, btnActivateText, activationTitle, activationDesc;
 let diagDot, diagMessage, diagEventsBadge;
+let sensorActiveIndicator, activeEventsCount;
 let sensorEventCount = 0;
 let isRealSensorActive = false;
 
@@ -436,6 +437,9 @@ function handleMotionEvent(event) {
     diagEventsBadge.textContent = `Zdarzeń: ${sensorEventCount}`;
     diagEventsBadge.className = "text-[10px] bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700/60 text-emerald-300 font-bold";
   }
+  if (activeEventsCount) {
+    activeEventsCount.textContent = `${sensorEventCount} odb.`;
+  }
 
   const acc = event.accelerationIncludingGravity || event.acceleration;
   if (!acc || acc.x === null) return;
@@ -450,25 +454,20 @@ function handleMotionEvent(event) {
 // Ustawienie UI po skutecznym włączeniu czujników
 function setSensorActiveSuccess() {
   isRealSensorActive = true;
-  if (diagDot) {
-    diagDot.className = "w-3 h-3 rounded-full bg-emerald-400 animate-pulse";
-  }
-  if (activationTitle) {
-    activationTitle.textContent = "Czujniki ruchu AKTYWNE! 📱";
-  }
-  if (activationDesc) {
-    activationDesc.textContent = "Żyroskop i akcelerometr przesyłają dane na żywo. Machaj telefonem!";
-  }
-  if (diagMessage) {
-    diagMessage.textContent = "Połączenie z czujnikami nawiązane pomyślnie.";
-    diagMessage.className = "text-emerald-300 font-bold";
-  }
-  if (btnActivateMotion) {
-    btnActivateMotion.className = "mt-3.5 w-full py-3 px-4 bg-emerald-900/60 border border-emerald-500/50 text-emerald-200 font-bold text-xs rounded-xl shadow transition flex items-center justify-center space-x-2 pointer-events-none";
-    btnActivateText.textContent = "✓ CZUJNIK AKTYWNY (ZATRĘŚ TELEFONEM)";
-  }
+
+  // Ukryj duży baner aktywacji i pokaż kompaktowy pasek stanu
   if (activationCard) {
-    activationCard.className = "relative rounded-2xl bg-gradient-to-b from-slate-900 to-slate-900/90 border-2 border-emerald-500/50 p-4 shadow-xl";
+    activationCard.classList.add('opacity-0', '-translate-y-2');
+    setTimeout(() => {
+      activationCard.style.display = 'none';
+      if (sensorActiveIndicator) {
+        sensorActiveIndicator.classList.remove('hidden');
+      }
+    }, 350);
+  }
+
+  if (activeEventsCount) {
+    activeEventsCount.textContent = `${sensorEventCount} odb.`;
   }
 }
 
@@ -599,6 +598,8 @@ function initializeApp() {
   diagDot = document.getElementById('diag-dot');
   diagMessage = document.getElementById('diag-message');
   diagEventsBadge = document.getElementById('diag-events-badge');
+  sensorActiveIndicator = document.getElementById('sensor-active-indicator');
+  activeEventsCount = document.getElementById('active-events-count');
 
   if (btnActivateMotion) {
     btnActivateMotion.addEventListener('click', triggerUniversalActivation);
