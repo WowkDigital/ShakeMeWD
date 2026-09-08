@@ -1,33 +1,31 @@
 // ==========================================
-// Stan aplikacji i konfiguracja
+// Application State and Configuration
 // ==========================================
 let revealedCount = 0;
 let lastShakeTime = 0;
-const SHAKE_COOLDOWN_MS = 220; // minimalna przerwa między cyframi
-let shakeThreshold = 18; // domyślny próg przyspieszenia (m/s^2)
+const SHAKE_COOLDOWN_MS = 220; // Minimum cooldown between detected shakes
+let shakeThreshold = 18; // Default acceleration threshold (m/s^2)
 
-// Referencje DOM
+// DOM References
 let digitCountBadge, latestDigitEl, digitPosEl, latestDigitCard, digitRing;
 let digitsContainer, forceBar, motionStatus, phoneIcon, btnShake, btnReset;
 let btnCopy, copyText, toggleSound, toggleVibrate;
 let thresholdSlider, thresholdValue, thresholdLine;
 let valX, valY, valZ, accelCanvas, canvasCtx, threeContainer;
 
-// Elementy uniwersalnego panelu aktywacji żyroskopu
+// Universal Sensor Activation Panel Elements
 let activationCard, btnActivateMotion, btnActivateText, activationTitle, activationDesc;
 let diagDot, diagMessage, diagEventsBadge;
 let sensorActiveIndicator, activeEventsCount;
 let sensorEventCount = 0;
 let isRealSensorActive = false;
 
-// Generator Pi
+// Pi Generator & Web Audio
 let piGenerator = null;
-
-// Audio Context
 let audioCtx = null;
 
 // ==========================================
-// Bufor i wykres XYZ 2D
+// Circular Buffer & 2D XYZ Oscilloscope Chart
 // ==========================================
 const BUFFER_SIZE = 90;
 const historyX = new Float32Array(BUFFER_SIZE);
@@ -38,16 +36,16 @@ let bufIndex = 0;
 let currentX = 0, currentY = 0, currentZ = 0;
 let currentMagnitude = 0;
 
-// Wizualizacja 3D Three.js
+// Three.js 3D Viewport
 let scene, camera, renderer, phoneMesh, vectorArrow;
 let targetRotX = 0, targetRotY = 0, targetRotZ = 0;
 
-// Stany akcelerometru
+// Accelerometer State Tracking
 let lastX = null, lastY = null, lastZ = null;
 let lastSensorTimestamp = 0;
 
 // ==========================================
-// Regulacja progu czułości
+// Sensitivity & Threshold Adjustment
 // ==========================================
 function updateThreshold(newVal) {
   shakeThreshold = Math.max(4, Math.min(50, Number(newVal)));
@@ -67,7 +65,7 @@ function updateThreshold(newVal) {
 }
 
 // ==========================================
-// Dźwięk
+// Sound Synthesis (Web Audio API)
 // ==========================================
 function playPopSound() {
   if (!toggleSound || !toggleSound.checked) return;
@@ -81,6 +79,7 @@ function playPopSound() {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     
+    // Frequency rises subtly with each discovered digit
     const freq = 450 + Math.min(revealedCount * 8, 700);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
@@ -100,14 +99,15 @@ function playPopSound() {
 }
 
 // ==========================================
-// Cyfry Pi
+// Pi Digits Retrieval & Formatting
 // ==========================================
 function getNextPiDigit(index) {
-  const dataOffset = 2; // pomijamy '3' i '.'
+  const dataOffset = 2; // Skip '3' and '.'
   if (window.PI_DIGITS && index + dataOffset < window.PI_DIGITS.length) {
     return window.PI_DIGITS[index + dataOffset];
   }
 
+  // Fallback to Spigot generator if buffer exceeded
   if (!piGenerator && window.generatePiDigits) {
     piGenerator = window.generatePiDigits();
     piGenerator.next(); // 3
@@ -116,6 +116,13 @@ function getNextPiDigit(index) {
     }
   }
   return piGenerator ? piGenerator.next().value.toString() : Math.floor(Math.random() * 10).toString();
+}
+
+// Ordinal suffix helper: 1st, 2nd, 3rd, 4th...
+function getOrdinalSuffix(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
 }
 
 function revealNextDigit() {
@@ -128,9 +135,9 @@ function revealNextDigit() {
 
   if (digitCountBadge) digitCountBadge.textContent = revealedCount;
   if (latestDigitEl) latestDigitEl.textContent = nextDigit;
-  if (digitPosEl) digitPosEl.textContent = `${revealedCount}. miejsce po przecinku`;
+  if (digitPosEl) digitPosEl.textContent = `${revealedCount}${getOrdinalSuffix(revealedCount)} decimal place`;
 
-  // Animacja karty
+  // Animate spotlight card
   if (latestDigitCard) {
     latestDigitCard.classList.remove('scale-105', 'border-purple-400');
     void latestDigitCard.offsetWidth;
@@ -147,7 +154,7 @@ function revealNextDigit() {
     }, 180);
   }
 
-  // Dodanie do ciągu
+  // Append new digit to history feed
   if (digitsContainer) {
     const span = document.createElement('span');
     span.textContent = nextDigit;
@@ -156,21 +163,21 @@ function revealNextDigit() {
     digitsContainer.scrollTop = digitsContainer.scrollHeight;
   }
 
-  // Wibracje
+  // Haptic feedback
   if (toggleVibrate && toggleVibrate.checked && 'vibrate' in navigator) {
     navigator.vibrate(35);
   }
 
-  // Dźwięk
+  // Sound effect
   playPopSound();
 
-  // Wstrząs w 3D
+  // 3D phone perturbation
   if (phoneMesh) {
     phoneMesh.rotation.z += (Math.random() - 0.5) * 0.7;
     phoneMesh.rotation.x += (Math.random() - 0.5) * 0.7;
   }
 
-  // Animacja ikony
+  // Phone icon micro-animation
   if (phoneIcon) {
     phoneIcon.classList.remove('animate-shake-hint');
     void phoneIcon.offsetWidth;
@@ -182,7 +189,7 @@ function resetAll() {
   revealedCount = 0;
   if (digitCountBadge) digitCountBadge.textContent = "0";
   if (latestDigitEl) latestDigitEl.textContent = "3";
-  if (digitPosEl) digitPosEl.textContent = "Część całkowita";
+  if (digitPosEl) digitPosEl.textContent = "Integer part";
   if (digitsContainer) digitsContainer.innerHTML = '<span class="text-purple-400 font-bold text-base">3.</span>';
   piGenerator = null;
 }
@@ -193,15 +200,15 @@ function copyPi() {
     text += getNextPiDigit(i);
   }
   navigator.clipboard.writeText(text).then(() => {
-    if (copyText) copyText.textContent = "Skopiowano!";
-    setTimeout(() => { if (copyText) copyText.textContent = "Kopiuj"; }, 1500);
+    if (copyText) copyText.textContent = "Copied!";
+    setTimeout(() => { if (copyText) copyText.textContent = "Copy"; }, 1500);
   }).catch(() => {
-    if (copyText) copyText.textContent = "Błąd";
+    if (copyText) copyText.textContent = "Error";
   });
 }
 
 // ==========================================
-// Obsługa danych sensora i bufora
+// Sensor Buffer Management
 // ==========================================
 function pushSensorData(x, y, z, delta) {
   historyX[bufIndex] = x;
@@ -220,7 +227,7 @@ function pushSensorData(x, y, z, delta) {
 }
 
 // ==========================================
-// Rysowanie oscyloskopu 2D
+// 2D Oscilloscope Canvas Renderer
 // ==========================================
 function setupCanvas() {
   if (!accelCanvas) return;
@@ -245,7 +252,7 @@ function drawOscilloscope() {
 
   canvasCtx.clearRect(0, 0, w, h);
 
-  // Pozioma linia zerowa
+  // Center zero line
   const midY = h / 2;
   canvasCtx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
   canvasCtx.lineWidth = 1;
@@ -254,7 +261,7 @@ function drawOscilloscope() {
   canvasCtx.lineTo(w, midY);
   canvasCtx.stroke();
 
-  // Linie siatki
+  // Subtle grid guides
   canvasCtx.strokeStyle = 'rgba(51, 65, 85, 0.2)';
   canvasCtx.beginPath();
   canvasCtx.moveTo(0, h * 0.25);
@@ -264,7 +271,7 @@ function drawOscilloscope() {
   canvasCtx.stroke();
 
   const step = w / (BUFFER_SIZE - 1);
-  const maxScale = 30;
+  const maxScale = 30; // +/- 30 m/s^2
 
   function drawAxis(buffer, color) {
     canvasCtx.beginPath();
@@ -288,7 +295,7 @@ function drawOscilloscope() {
 }
 
 // ==========================================
-// Wizualizacja 3D w Three.js
+// Three.js 3D Orientation Model
 // ==========================================
 function init3D() {
   if (!threeContainer || typeof THREE === 'undefined') return;
@@ -359,12 +366,12 @@ let simTimer = 0;
 function mainAnimationLoop(timestamp) {
   requestAnimationFrame(mainAnimationLoop);
 
-  // Jeśli brak fizycznego ruchu, delikatny szum grawitacji
+  // If no physical sensor data received, simulate gentle resting gravity so graph remains alive
   const timeSinceSensor = timestamp - lastSensorTimestamp;
   if (!isRealSensorActive || timeSinceSensor > 1200) {
     simTimer += 0.04;
     const idleX = Math.sin(simTimer * 1.5) * 0.4;
-    const idleY = 9.8 + Math.cos(simTimer * 1.2) * 0.3;
+    const idleY = 9.8 + Math.cos(simTimer * 1.2) * 0.3; // Earth gravity
     const idleZ = Math.sin(simTimer * 0.8) * 0.2;
     pushSensorData(idleX, idleY, idleZ, 0.1);
   }
@@ -388,7 +395,7 @@ function mainAnimationLoop(timestamp) {
 }
 
 // ==========================================
-// Logika wstrząsu i czujników
+// Acceleration & Shake Processing
 // ==========================================
 function processAcceleration(x, y, z) {
   isRealSensorActive = true;
@@ -414,13 +421,13 @@ function processAcceleration(x, y, z) {
 
   if (totalDelta >= shakeThreshold) {
     if (motionStatus) {
-      motionStatus.textContent = `· Wstrząs (${totalDelta.toFixed(0)} m/s²)! 💥`;
+      motionStatus.textContent = `· Shake detected (${totalDelta.toFixed(0)} m/s²)! 💥`;
       motionStatus.className = "text-[11px] text-emerald-400 font-bold animate-pulse";
     }
     revealNextDigit();
     setTimeout(() => {
       if (motionStatus) {
-        motionStatus.textContent = "· Oczekiwanie na ruch";
+        motionStatus.textContent = "· Waiting for motion";
         motionStatus.className = "text-[11px] text-purple-400 font-medium";
       }
     }, 450);
@@ -434,11 +441,11 @@ function processAcceleration(x, y, z) {
 function handleMotionEvent(event) {
   sensorEventCount++;
   if (diagEventsBadge) {
-    diagEventsBadge.textContent = `Zdarzeń: ${sensorEventCount}`;
+    diagEventsBadge.textContent = `Events: ${sensorEventCount}`;
     diagEventsBadge.className = "text-[10px] bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700/60 text-emerald-300 font-bold";
   }
   if (activeEventsCount) {
-    activeEventsCount.textContent = `${sensorEventCount} odb.`;
+    activeEventsCount.textContent = `${sensorEventCount} rcvd`;
   }
 
   const acc = event.accelerationIncludingGravity || event.acceleration;
@@ -451,11 +458,11 @@ function handleMotionEvent(event) {
   processAcceleration(acc.x || 0, acc.y || 0, acc.z || 0);
 }
 
-// Ustawienie UI po skutecznym włączeniu czujników
+// UI transition once real sensor data arrives
 function setSensorActiveSuccess() {
   isRealSensorActive = true;
 
-  // Ukryj duży baner aktywacji i pokaż kompaktowy pasek stanu
+  // Smoothly hide the big prompt banner and show the compact active bar
   if (activationCard) {
     activationCard.classList.add('opacity-0', '-translate-y-2');
     setTimeout(() => {
@@ -467,25 +474,25 @@ function setSensorActiveSuccess() {
   }
 
   if (activeEventsCount) {
-    activeEventsCount.textContent = `${sensorEventCount} odb.`;
+    activeEventsCount.textContent = `${sensorEventCount} rcvd`;
   }
 }
 
 // ==========================================
-// UNIWERSALNY GEST AKTYWACJI (iOS, Android, Chrome, Safari)
+// Universal Activation Handler (iOS, Android, Chrome, Safari)
 // ==========================================
 function triggerUniversalActivation() {
-  // Rozpocznij / odblokuj też AudioContext przy geście użytkownika
+  // Unlock audio context on first user gesture
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
   } catch (e) {}
 
   if (diagMessage) {
-    diagMessage.textContent = "Próba aktywacji czujnika...";
+    diagMessage.textContent = "Requesting sensor permissions...";
   }
 
-  // 1. Obsługa iOS Safari (DeviceMotionEvent.requestPermission)
+  // 1. iOS Safari Permission Protocol (DeviceMotionEvent.requestPermission)
   if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
     DeviceMotionEvent.requestPermission()
       .then(state => {
@@ -494,7 +501,7 @@ function triggerUniversalActivation() {
           setSensorActiveSuccess();
         } else {
           if (diagMessage) {
-            diagMessage.textContent = "Odmówiono uprawnień w Safari.";
+            diagMessage.textContent = "Permission denied in Safari settings.";
             diagMessage.className = "text-rose-400 font-bold";
           }
           if (diagDot) diagDot.className = "w-3 h-3 rounded-full bg-rose-500";
@@ -502,30 +509,29 @@ function triggerUniversalActivation() {
       })
       .catch(err => {
         if (diagMessage) {
-          diagMessage.textContent = `Błąd uprawnień: ${err.message || err}`;
+          diagMessage.textContent = `Permission error: ${err.message || err}`;
           diagMessage.className = "text-rose-400 font-bold";
         }
       });
     return;
   }
 
-  // 2. Obsługa DeviceOrientation / Android
+  // 2. Android Chrome / Standard DeviceOrientation
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().catch(() => {});
   }
 
-  // 3. Android Chrome i standardowe przeglądarki
+  // 3. General Browsers
   if ('ondevicemotion' in window || 'DeviceMotionEvent' in window) {
     window.addEventListener('devicemotion', handleMotionEvent, true);
 
-    // Daj 600ms na nadejście zdarzenia
     setTimeout(() => {
       if (sensorEventCount > 0) {
         setSensorActiveSuccess();
       } else {
         if (!window.isSecureContext && window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
           if (diagMessage) {
-            diagMessage.textContent = "Chrome Android blokuje czujnik na HTTP. Uruchom po HTTPS lub użyj testu PC.";
+            diagMessage.textContent = "Chrome Android requires HTTPS for sensors. Use HTTPS or Desktop test.";
             diagMessage.className = "text-amber-300 font-bold";
           }
         } else {
@@ -535,13 +541,13 @@ function triggerUniversalActivation() {
     }, 600);
   } else {
     if (diagMessage) {
-      diagMessage.textContent = "Brak czujnika ruchu w tym urządzeniu. Działa tryb symulacji poniżej.";
+      diagMessage.textContent = "No motion hardware detected. Using desktop simulation mode.";
       diagMessage.className = "text-slate-400";
     }
   }
 }
 
-// Symulacja wstrząsu (przycisk testowy)
+// Simulated shake for desktop testing
 function triggerSimulatedShake() {
   const simEnergy = shakeThreshold + 12;
   const sx = (Math.random() * 24 - 12);
@@ -562,7 +568,7 @@ function triggerSimulatedShake() {
 }
 
 // ==========================================
-// Główny punkt startowy
+// Application Bootstrap
 // ==========================================
 function initializeApp() {
   digitCountBadge = document.getElementById('digit-count-badge');
@@ -589,7 +595,7 @@ function initializeApp() {
   accelCanvas = document.getElementById('accel-chart');
   threeContainer = document.getElementById('three-container');
 
-  // Uniwersalny panel
+  // Activation banner elements
   activationCard = document.getElementById('activation-card');
   btnActivateMotion = document.getElementById('btn-activate-motion');
   btnActivateText = document.getElementById('btn-activate-text');
@@ -620,7 +626,7 @@ function initializeApp() {
   init3D();
   requestAnimationFrame(mainAnimationLoop);
 
-  // Jeśli urządzenie natychmiast zezwala bez kliknięcia (część przeglądarek)
+  // Auto-listen if browser does not require permission prompt
   if ('ondevicemotion' in window && !('requestPermission' in DeviceMotionEvent)) {
     window.addEventListener('devicemotion', handleMotionEvent, { once: false, passive: true });
   }

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pl" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Shake Pi 🥧 3D - Liczba Pi ruchem telefonu</title>
+  <title>Shake Pi 🥧 3D - Discover Pi by Shaking Your Phone</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -50,7 +50,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <!-- Three.js do płynnej wizualizacji 3D -->
+  <!-- Three.js for 3D real-time orientation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     body {
@@ -93,7 +93,7 @@
 
   <div class="relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full px-4 py-3 space-y-3">
     
-    <!-- BANER / PANEL AKTYWACJI CZUJNIKA NA SAMEJ GÓRZE -->
+    <!-- TOP ACTIVATION BANNER / PROMPT -->
     <section id="activation-card" class="relative rounded-2xl bg-gradient-to-br from-purple-950 via-slate-900 to-indigo-950 border-2 border-amber-400 p-4 shadow-2xl shadow-purple-950/60 transition-all duration-500">
       <div class="flex items-start justify-between">
         <div class="flex items-center space-x-3">
@@ -104,50 +104,50 @@
           </div>
           <div>
             <div class="flex items-center space-x-2">
-              <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[10px] tracking-wider uppercase border border-amber-500/30">Krok 1: Wymagane</span>
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[10px] tracking-wider uppercase border border-amber-500/30">Step 1: Required</span>
               <span id="diag-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
             </div>
-            <h2 id="activation-title" class="font-extrabold text-sm text-white mt-1">Aktywuj czujnik ruchu (Żyroskop)</h2>
+            <h2 id="activation-title" class="font-extrabold text-sm text-white mt-1">Enable Motion Sensors (Gyroscope)</h2>
           </div>
         </div>
       </div>
 
-      <!-- Wyraźny opis konieczności włączenia -->
+      <!-- Instructions on why sensor permission is required -->
       <div class="mt-2.5 bg-slate-950/70 border border-slate-800/80 rounded-xl p-2.5 text-xs text-slate-300 space-y-1">
         <p class="text-amber-200 font-semibold flex items-center space-x-1.5">
           <span>⚠️</span>
-          <span>Akcelerometr musi być włączony, aby aplikacja działała!</span>
+          <span>Accelerometer must be enabled for the app to work!</span>
         </p>
         <p class="text-[11px] text-slate-400 leading-snug">
-          Przeglądarki mobilne (iPhone / Android) blokują odczyt potrząśnięć bez Twojej jawnej zgody. Kliknij poniższy przycisk i wybierz <b>"Zezwól"</b>.
+          Mobile browsers (iPhone Safari & Android Chrome) block motion tracking without your explicit gesture. Tap below and choose <b>"Allow"</b>.
         </p>
       </div>
 
-      <!-- Duży przycisk aktywacji -->
+      <!-- Big Call to Action Button -->
       <button id="btn-activate-motion" class="mt-3.5 w-full py-4 px-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:brightness-110 active:scale-[0.98] text-slate-950 font-black text-sm rounded-xl shadow-xl shadow-amber-500/30 transition-all flex items-center justify-center space-x-2 tracking-wide uppercase">
         <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
-        <span id="btn-activate-text">WŁĄCZ AKCELEROMETR I ŻYROSKOP</span>
+        <span id="btn-activate-text">ENABLE ACCELEROMETER & GYRO</span>
       </button>
 
-      <!-- Status diagnostyczny pod przyciskiem -->
+      <!-- Diagnostic status footer -->
       <div class="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 px-0.5 font-mono-pi">
-        <span id="diag-message" class="text-amber-300 font-medium">Oczekiwanie na włączenie czujnika...</span>
+        <span id="diag-message" class="text-amber-300 font-medium">Waiting for sensor activation...</span>
         <span id="diag-events-badge" class="text-[10px] bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-400">
-          Zdarzeń: 0
+          Events: 0
         </span>
       </div>
     </section>
 
-    <!-- Dyskretny pasek stanu gdy czujnik już działa (po ukryciu baneru aktywacji) -->
+    <!-- Compact status badge displayed after activation card hides -->
     <div id="sensor-active-indicator" class="hidden w-full bg-emerald-950/70 border border-emerald-500/40 rounded-xl px-3 py-1.5 flex items-center justify-between shadow-sm">
       <div class="flex items-center space-x-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-xs font-bold text-emerald-300">Akcelerometr aktywny – potrząśnij telefonem! 📱</span>
+        <span class="text-xs font-bold text-emerald-300">Sensor Active – Shake your phone! 📱</span>
       </div>
       <span id="active-events-count" class="font-mono-pi text-[10px] text-emerald-400 bg-emerald-900/50 px-1.5 py-0.5 rounded">
-        0 odb.
+        0 rcvd
       </span>
     </div>
 
@@ -162,64 +162,64 @@
             <span>Shake Pi 3D</span>
             <span class="text-[10px] font-mono-pi font-normal px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/60">v2.0</span>
           </h1>
-          <p class="text-[11px] text-slate-400">Potrząśnij telefonem, by odkrywać cyfry $\pi$</p>
+          <p class="text-[11px] text-slate-400">Shake your phone to reveal digits of $\pi$</p>
         </div>
       </div>
-      <!-- Licznik odkrytych cyfr -->
+      <!-- Discovered digits counter -->
       <div class="flex flex-col items-end">
-        <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Odkryto</span>
+        <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Revealed</span>
         <div class="flex items-center space-x-1">
           <span id="digit-count-badge" class="font-mono-pi text-base font-extrabold px-2.5 py-0.5 rounded-full bg-purple-900/60 border border-purple-700/60 text-purple-200 shadow">
             0
           </span>
-          <span class="text-[11px] text-slate-500 font-medium">cyfr</span>
+          <span class="text-[11px] text-slate-500 font-medium">digits</span>
         </div>
       </div>
     </header>
 
-    <!-- 3. Główna sekcja interaktywna: Aktywna cyfra + Model 3D -->
+    <!-- 2. Main interactive section: Active digit + 3D Viewport -->
     <main class="flex-1 flex flex-col justify-center space-y-3">
       
-      <!-- Dwa kafelki: Cyfra + Trójwymiarowy wektor -->
+      <!-- Top Row: Latest Digit Spotlight + 3D Phone Model -->
       <div class="w-full grid grid-cols-2 gap-3">
         
-        <!-- Karta Ostatniej Cyfry -->
+        <!-- Latest Digit Spotlight Card -->
         <div class="relative group">
           <div id="digit-ring" class="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 opacity-20 blur-md transition duration-300"></div>
           <div id="latest-digit-card" class="relative h-40 rounded-2xl bg-slate-900/90 border border-slate-800/90 backdrop-blur-xl flex flex-col items-center justify-center shadow-xl transition-transform duration-150 p-2">
             <span class="text-[10px] tracking-widest text-slate-400 uppercase font-semibold" id="digit-label">
-              Ostatnia cyfra
+              Current Digit
             </span>
             <div id="latest-digit" class="font-mono-pi text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-200 my-0.5">
               3
             </div>
             <div id="digit-pos" class="text-[11px] text-purple-300 font-semibold font-mono-pi text-center">
-              Część całkowita
+              Integer part
             </div>
           </div>
         </div>
 
-        <!-- Kafelek 3D Gyro / Akcelerometr z Three.js -->
+        <!-- 3D Gyro / Three.js Accelerometer Canvas -->
         <div class="relative h-40 rounded-2xl bg-slate-900/90 border border-slate-800/90 backdrop-blur-xl overflow-hidden shadow-xl flex flex-col">
           <div class="absolute top-2 left-2 z-10 flex items-center space-x-1.5 bg-slate-950/70 px-2 py-0.5 rounded-full border border-slate-800/60 pointer-events-none">
             <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-[9px] uppercase font-bold tracking-wider text-slate-300">Żyroskop 3D</span>
+            <span class="text-[9px] uppercase font-bold tracking-wider text-slate-300">3D Gyroscope</span>
           </div>
           <!-- Canvas 3D viewport -->
           <div id="three-container" class="w-full h-full"></div>
         </div>
       </div>
 
-      <!-- 4. Przejrzysty wykres przyśpieszeń osi XYZ -->
+      <!-- 3. Real-time XYZ Accelerometer Live Oscilloscope Chart -->
       <div class="w-full bg-slate-900/80 border border-slate-800/90 backdrop-blur-md rounded-2xl p-3 shadow-lg flex flex-col space-y-2">
         
-        <!-- Nagłówek wykresu z wyraźną legendą XYZ -->
+        <!-- Header with XYZ legends -->
         <div class="flex items-center justify-between border-b border-slate-800/60 pb-1.5">
           <div class="flex items-center space-x-1.5">
-            <span class="text-xs font-bold text-slate-200">Wykres przyśpieszeń</span>
-            <span id="motion-status" class="text-[11px] text-purple-400 font-medium">· Oczekiwanie na ruch</span>
+            <span class="text-xs font-bold text-slate-200">Acceleration Chart</span>
+            <span id="motion-status" class="text-[11px] text-purple-400 font-medium">· Waiting for motion</span>
           </div>
-          <!-- Legend / Wartości XYZ -->
+          <!-- XYZ live numeric badges -->
           <div class="flex items-center space-x-2.5 text-[11px] font-mono-pi font-bold">
             <span class="flex items-center space-x-1 text-rose-400">
               <span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
@@ -236,36 +236,36 @@
           </div>
         </div>
 
-        <!-- Canvas oscyloskopu -->
+        <!-- 2D Canvas Oscilloscope Chart -->
         <div class="relative w-full h-20 bg-slate-950/95 rounded-xl border border-slate-800/80 overflow-hidden">
           <canvas id="accel-chart" class="w-full h-full block"></canvas>
           <!-- Threshold line -->
           <div id="threshold-line" class="absolute left-0 right-0 border-b border-dashed border-amber-400/80 pointer-events-none transition-all duration-150" style="top: 50%;">
             <span class="absolute right-1 -top-3.5 text-[8px] font-mono-pi font-bold text-amber-300 bg-slate-900/90 px-1 rounded border border-amber-500/40">
-              Próg wstrząsu
+              Shake Threshold
             </span>
           </div>
         </div>
 
-        <!-- Wskaźnik siły potrząśnięcia -->
+        <!-- Shake force visualizer bar -->
         <div class="flex items-center justify-between text-xs pt-0.5">
           <span class="text-[11px] text-slate-400 font-medium flex items-center space-x-1">
             <svg id="phone-icon" class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="5" y="2" width="14" height="20" rx="3" stroke-width="2"/>
             </svg>
-            <span>Wstrząs telefonu:</span>
+            <span>Shake Intensity:</span>
           </span>
           <div class="w-36 h-2 bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-slate-700/60">
             <div id="force-bar" class="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-400 rounded-full w-0 transition-all duration-75"></div>
           </div>
         </div>
 
-        <!-- 5. Suwak regulacji progu czułości -->
+        <!-- 4. Sensitivity & Threshold Slider -->
         <div class="pt-2 flex flex-col space-y-1.5 border-t border-slate-800/80">
           <div class="flex justify-between items-center text-xs">
             <label for="threshold-slider" class="text-slate-300 font-semibold flex items-center space-x-1.5">
               <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              <span>Czułość wstrząsu:</span>
+              <span>Shake Sensitivity:</span>
             </label>
             <span id="threshold-value" class="font-mono-pi text-amber-300 font-bold text-xs bg-amber-950/80 border border-amber-700/50 px-2 py-0.5 rounded-md shadow-sm">
               18 m/s²
@@ -281,20 +281,20 @@
             class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500 focus:outline-none"
           >
           <div class="flex justify-between text-[10px] text-slate-400 font-mono-pi px-0.5">
-            <span>Bardzo lekki (6)</span>
-            <span>Średni (18)</span>
-            <span>Mocny wstrząs (40)</span>
+            <span>Very Sensitive (6)</span>
+            <span>Default (18)</span>
+            <span>Hard Shake (40)</span>
           </div>
         </div>
       </div>
 
-      <!-- 6. Pełny ciąg odkrytych cyfr Pi -->
+      <!-- 5. Full Revealed Pi Sequence -->
       <div class="w-full bg-slate-900/60 border border-slate-800/80 backdrop-blur-md rounded-2xl p-3 flex flex-col">
         <div class="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/60">
-          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ciąg liczby π</span>
-          <button id="btn-copy" title="Skopiuj ciąg" class="text-xs flex items-center space-x-1 text-slate-300 hover:text-white transition px-2.5 py-1 rounded bg-slate-800/80 active:scale-95 border border-slate-700/60">
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Number $\pi$ Sequence</span>
+          <button id="btn-copy" title="Copy sequence to clipboard" class="text-xs flex items-center space-x-1 text-slate-300 hover:text-white transition px-2.5 py-1 rounded bg-slate-800/80 active:scale-95 border border-slate-700/60">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-            <span id="copy-text">Kopiuj</span>
+            <span id="copy-text">Copy</span>
           </button>
         </div>
         
@@ -306,28 +306,28 @@
 
     </main>
 
-    <!-- 7. Przyciski dolne i opcje -->
+    <!-- 6. Footer Controls & Options -->
     <footer class="space-y-2 pt-1 pb-1">
-      <!-- Przycisk symulacji dla testów na PC -->
+      <!-- Simulation button for testing on desktop -->
       <button id="btn-shake" class="w-full py-3 px-5 bg-gradient-to-r from-slate-800 to-slate-800/90 hover:from-slate-700 hover:to-slate-800 text-slate-200 font-bold text-xs rounded-xl border border-slate-700/70 shadow active:scale-[0.98] transition-all flex items-center justify-center space-x-2">
         <svg class="w-4 h-4 text-purple-400 animate-spin-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        <span>Symuluj potrząśnięcie (Test PC)</span>
+        <span>Simulate Shake (Desktop Test)</span>
       </button>
 
-      <!-- Opcje dźwięku, wibracji i reset -->
+      <!-- Toggle Sound, Vibration, Reset -->
       <div class="flex items-center justify-between text-xs text-slate-400 px-1 pt-0.5">
         <div class="flex items-center space-x-4">
           <label class="flex items-center space-x-1.5 cursor-pointer">
             <input type="checkbox" id="toggle-sound" checked class="rounded border-slate-700 text-purple-600 focus:ring-0 bg-slate-800">
-            <span>Dźwięk</span>
+            <span>Sound</span>
           </label>
           <label class="flex items-center space-x-1.5 cursor-pointer">
             <input type="checkbox" id="toggle-vibrate" checked class="rounded border-slate-700 text-purple-600 focus:ring-0 bg-slate-800">
-            <span>Wibracja</span>
+            <span>Vibration</span>
           </label>
         </div>
         <button id="btn-reset" class="text-rose-400 hover:text-rose-300 transition underline underline-offset-2 font-medium">
-          Resetuj ciąg
+          Reset
         </button>
       </div>
     </footer>
